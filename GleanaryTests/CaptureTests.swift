@@ -122,6 +122,30 @@ struct CaptureTests {
         #expect(throws: CaptureError.self) { try ArtifactStore.kind(data: data, mime: "application/json") }
     }
 
+    @Test func negotiatedMarkdownAtASiteRootTakesItsHeadingAsTitle() async throws {
+        let fixture = try CaptureFixture(); defer { fixture.clean() }
+        _ = try await fixture.store.open(seed: [])
+        let fetcher = FixtureFetcher()
+        let url = try #require(URL(string: "https://fixture.example/"))
+        await fetcher.set(
+            url,
+            data: Data("# Synthetic graph\n\nA synthetic page served as Markdown.".utf8),
+            mime: "text/markdown"
+        )
+        let engine = IngestionEngine(
+            store: fixture.store,
+            fetcher: fetcher,
+            summarizer: FixtureLinkSummarizer()
+        )
+        _ = try await engine.enqueue(url.absoluteString)
+        try await engine.run()
+        let note = try #require(await fixture.store.documents().first)
+        let id = try #require(await fixture.store.captureID(for: note.id))
+        let detail = try await fixture.store.captureDetail(id: id)
+        #expect(detail.document.title == "Synthetic graph")
+        #expect(IngestionEngine.artifactName(url) == "fixture.example")
+    }
+
     @Test func rejectsPrivateLiteralAndResolvedAddresses() async throws {
         for address in [
             "127.0.0.1",
