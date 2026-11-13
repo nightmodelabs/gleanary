@@ -1206,7 +1206,7 @@ extension AgentCoordinator {
                 name: "Research source",
                 url: downloaded.url
             )
-        } else if downloaded.mime == "text/plain" {
+        } else if ["text/plain", "text/markdown", "text/x-markdown"].contains(downloaded.mime) {
             let text = String(decoding: downloaded.data, as: UTF8.self)
             document = CapturedDocument(
                 title: downloaded.url.host ?? "Research source",
