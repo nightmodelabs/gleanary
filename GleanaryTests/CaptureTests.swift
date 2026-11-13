@@ -115,6 +115,13 @@ struct CaptureTests {
         }
     }
 
+    @Test func classifiesNegotiatedMarkdownAtAnExtensionlessURL() throws {
+        let data = Data("# Omnigraph\n\nA page served as Markdown.".utf8)
+        #expect(try ArtifactStore.kind(data: data, mime: "text/markdown") == .markdown)
+        #expect(try ArtifactStore.kind(data: data, mime: "text/x-markdown") == .markdown)
+        #expect(throws: CaptureError.self) { try ArtifactStore.kind(data: data, mime: "application/json") }
+    }
+
     @Test func rejectsPrivateLiteralAndResolvedAddresses() async throws {
         for address in [
             "127.0.0.1",

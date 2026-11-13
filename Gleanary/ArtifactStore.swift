@@ -95,7 +95,10 @@ actor ArtifactStore {
         {
             return .html
         }
-        if ["md", "markdown"].contains(suffix.lowercased()) {
+        // Some sites negotiate Markdown for non-browser clients, at an extensionless URL.
+        if ["md", "markdown"].contains(suffix.lowercased())
+            || ["text/markdown", "text/x-markdown"].contains(mime)
+        {
             return .markdown
         }
         if suffix.lowercased() == "txt" || mime == "text/plain" {
