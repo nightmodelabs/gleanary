@@ -310,7 +310,14 @@ actor IngestionEngine {
                 artifacts.data(for: primary),
                 encoding: primary.textEncoding
             )
-            let title = job.request.identity.hasPrefix("text:") ? Self.title(text) : primary.name
+            let heading = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = if job.request.identity.hasPrefix("text:") {
+                Self.title(text)
+            } else if primary.kind == .markdown, heading.hasPrefix("# ") {
+                Self.title(heading)
+            } else {
+                primary.name
+            }
             document = CapturedDocument(
                 title: title,
                 sourceURL: primary.sourceURL,
@@ -644,8 +651,7 @@ actor IngestionEngine {
         try Self.requireDocumentSource(page.url)
         return try await artifacts.retain(
             Data(page.html.utf8), kind: .html,
-            name: page.url.lastPathComponent.isEmpty ? page.url.host ?? "Web capture"
-                : page.url.lastPathComponent,
+            name: Self.artifactName(page.url),
             sourceURL: page.url, textEncoding: "utf-8"
         )
     }
@@ -666,14 +672,10 @@ actor IngestionEngine {
             extension: fetched.url.pathExtension,
             mime: fetched.mime
         )
-        var name = fetched.url.lastPathComponent
-        if name.isEmpty {
-            name = fetched.url.host ?? "Web capture"
-        }
         return try await artifacts.retain(
             fetched.data,
             kind: kind,
-            name: name,
+            name: Self.artifactName(fetched.url),
             sourceURL: fetched.url,
             textEncoding: fetched.encoding
         )
@@ -693,6 +695,12 @@ actor IngestionEngine {
             }
         try document.validate()
         return document
+    }
+
+    /// A site's root path is "/", which names nothing, so it falls back to the host.
+    nonisolated static func artifactName(_ url: URL) -> String {
+        let name = url.lastPathComponent
+        return name.isEmpty || name == "/" ? url.host ?? "Web capture" : name
     }
 
     private static func requireDocumentSource(_ url: URL) throws {
