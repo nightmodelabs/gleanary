@@ -310,16 +310,12 @@ actor IngestionEngine {
                 artifacts.data(for: primary),
                 encoding: primary.textEncoding
             )
-            let heading = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            let title = if job.request.identity.hasPrefix("text:") {
-                Self.title(text)
-            } else if primary.kind == .markdown, heading.hasPrefix("# ") {
-                Self.title(heading)
-            } else {
-                primary.name
-            }
             document = CapturedDocument(
-                title: title,
+                title: Self.textTitle(
+                    text,
+                    artifact: primary,
+                    pasted: job.request.identity.hasPrefix("text:")
+                ),
                 sourceURL: primary.sourceURL,
                 coverage: .note,
                 blocks: [ContentBlock(
@@ -705,6 +701,16 @@ actor IngestionEngine {
 
     private static func requireDocumentSource(_ url: URL) throws {
         guard try MediaTarget.parse(url) == nil else { throw CaptureError.unsupported }
+    }
+
+    /// Pasted text and Markdown led by an `# ` heading title themselves; a file keeps its name.
+    private static func textTitle(_ text: String, artifact: Artifact, pasted: Bool) -> String {
+        if pasted {
+            return title(text)
+        }
+        let heading = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard artifact.kind == .markdown, heading.hasPrefix("# ") else { return artifact.name }
+        return title(heading)
     }
 
     private static func title(_ text: String) -> String {
